@@ -55,8 +55,10 @@ class ReadKiprisData:
         df_eda_dict['파일이름'] = filename.replace(".csv", "")
         df_eda_dict['행수'] = len(df)
 
-        unique_pt = df['특허번호'].dropna().unique(); df_eda_dict['특허 건수'] = len(unique_pt) # 특허 건수 카운팅
-        unique_pt_sen_group = df.groupby(['특허번호', '문장번호']); df_eda_dict['전체 문장 건수'] = len(unique_pt_sen_group.groups) # 전체 문장 건수
+        # unique_pt = df['특허번호'].dropna().unique(); df_eda_dict['특허 건수'] = len(unique_pt) # 특허 건수 카운팅
+        # unique_pt_sen_group = df.groupby(['특허번호', '문장번호']); df_eda_dict['전체 문장 건수'] = len(unique_pt_sen_group.groups) # 전체 문장 건수
+        df_eda_dict['특허 건수'] = len(df.groupby('특허번호'))
+        df_eda_dict['전체 문장 건수'] = len(df.groupby('문장'))
 
         # bio 태그 별 건수
         tag_group = df.groupby('BIO')
