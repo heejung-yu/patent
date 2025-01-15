@@ -7,6 +7,8 @@ class ReadKiprisData:
     def __init__ (self):
         self.data_eda_df = pd.DataFrame()
         self.data_df = pd.DataFrame()
+        self.patent_number_list = []
+        self.patent_sen_list = []
 
     # csv 파일 읽기 -------------------------------------------------------------------------------
     def read_csv(self, path: str)-> pd.DataFrame:
@@ -57,8 +59,9 @@ class ReadKiprisData:
 
         # unique_pt = df['특허번호'].dropna().unique(); df_eda_dict['특허 건수'] = len(unique_pt) # 특허 건수 카운팅
         # unique_pt_sen_group = df.groupby(['특허번호', '문장번호']); df_eda_dict['전체 문장 건수'] = len(unique_pt_sen_group.groups) # 전체 문장 건수
-        df_eda_dict['특허 건수'] = len(df.groupby('특허번호'))
-        df_eda_dict['전체 문장 건수'] = len(df.groupby('문장'))
+        df_eda_dict['특허 건수'] = len(df['특허번호'].unique())
+        df_eda_dict['전체 문장 건수'] = len(df['문장'].unique())
+        df_eda_dict['전체 단어 건수'] = len(df['단어'])
 
         # bio 태그 별 건수
         tag_group = df.groupby('BIO')
@@ -66,18 +69,43 @@ class ReadKiprisData:
             df_eda_dict[idx] = len(data)
 
         return df_eda_dict
+    
+    # 이상값, 중복값 제거 ------------------------------------------------------------------------
+    def clean_df(self, df: pd.DataFrame)-> pd.DataFrame:
+        df[['특허번호', '문장번호', '문장']] = df[['특허번호', '문장번호', '문장']].ffill() # nan값 채우기
+
+        if len(self.patent_number_list) == 0: 
+            self.patent_number_list.extend(list(df['특허번호'].unique()))
+        else: 
+            # 기존 특허와 겹치는 중복 특허 제거
+            df = df[~df['특허번호'].isin(self.patent_number_list)]
+            self.patent_number_list.extend(list(df['특허번호'].unique()))
+
+        if len(self.patent_number_list) == 0: 
+            self.patent_sen_list.extend(list(df['문장'].unique()))
+        else: 
+            # 기존 문장과 겹치는 중복 특허 제거
+            df = df[~df['문장'].isin(self.patent_sen_list)]
+            self.patent_sen_list.extend(list(df['문장'].unique()))
+
+        df = df[~(df['단어'].isnull() | (df['단어'] == ""))]  # 단어 열의 nan값, 공백값 제거
+        df['BIO'] = df['BIO'].fillna("O").replace("", "O")  # BIO nan값, 공백값값 "O"로 채우기
+
+        return df
 
     # main -----------------------------------------------------------------------------------------------------------------
-    def run(self, data_path: str="../old/data/ner_dic_ami")-> pd.DataFrame:
+    def run(self, data_path: str="../data/ner_dic_ami")-> pd.DataFrame:
         data_file_list = os.listdir(data_path)
 
         for filename in tqdm(data_file_list):
             df = self.read_csv(os.path.join(data_path, filename))
-            df[['특허번호', '문장번호', '문장']] = df[['특허번호', '문장번호', '문장']].ffill() # nan값 채우기
 
-            self.data_df = pd.concat([self.data_df, df])
+            if len(df)!=0:
+                df = self.clean_df(df)
 
-            # base_dict = self.base_eda(df, filename)
-            # self.data_eda_df = pd.concat([self.data_eda_df, pd.DataFrame([base_dict])])
+                self.data_df = pd.concat([self.data_df, df])
+
+                base_dict = self.base_eda(df, filename)
+                self.data_eda_df = pd.concat([self.data_eda_df, pd.DataFrame([base_dict])])
 
         return self.data_df
