@@ -24,17 +24,18 @@ def read_csv(path: str)-> pd.DataFrame:
 #     return df
 
 # 청구항에서 의미없는 청구항 번호 삭제
-def delete_claim_number(df: pd.DataFrame, text: str)-> pd.DataFrame:
+def delete_claim_number(df: pd.DataFrame, col: str)-> pd.DataFrame:
     def text_replace(text:str)->str:
-        new_text = re.sub(r"(\d)\. ", "", text)
-        return new_text.rstrip()
+        new_text = re.sub(r"(\d)\. ", " ", text, count=1)
+        new_text = re.sub(r"(\d)\. ", "\n", new_text)
+        return new_text.strip()
 
-    df['문장'] = df['문장'].apply(lambda sen: text_replace(sen))
+    df[col] = df[col].apply(lambda sen: text_replace(sen))
 
     return df
 
 # 문장 토크나이징 -----------------------------------------------------------------------------
-def tokenizing_sentence(df:pd.DataFrame, sen: str)-> list:
+def tokenizing_sentence(df:pd.DataFrame, sen_col: str, new_col: str)-> list:
     model_path = "./KIPI-KorPatELECTRA/KorPatELECTRA/PT"
     tokenizer = ElectraTokenizer.from_pretrained(model_path)
     def tokenizing(sen: str)-> str:
@@ -43,5 +44,5 @@ def tokenizing_sentence(df:pd.DataFrame, sen: str)-> list:
 
         return tokens
     
-    df['토큰'] = df['문장'].apply(lambda data: tokenizing(data))
+    df[new_col] = df[sen_col].apply(lambda data: tokenizing(data))
     return df
