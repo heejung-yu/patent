@@ -2,21 +2,10 @@ import pandas as pd
 from tqdm import tqdm
 import json
 from typing import List
-from dotenv import load_dotenv
 import os
 import pymysql
+from functions import setup_logging, get_env_var
 import logging
-
-# 로깅 설정 ----------------------------------------------------------------------------------------------
-def setup_logging(log_file: str = "read_ami_kipris_data_log.txt"):
-    logging.basicConfig(
-        level=logging.INFO,  # 로그 레벨 설정 (DEBUG, INFO, WARNING, ERROR, CRITICAL)
-        format="%(asctime)s - %(levelname)s - %(message)s",  
-        handlers=[
-            logging.FileHandler(log_file, mode='w'),  # 파일에 로그 저장, mode 기본은 append
-            logging.StreamHandler()  # 콘솔 출력 (필요 없으면 제거 가능)
-        ]
-    )
 
 # mysql 서버 connection 생성 ----------------------------------------------------------------------------------
 def create_connection()-> pymysql.connections.Connection:
@@ -31,14 +20,6 @@ def create_connection()-> pymysql.connections.Connection:
     except Exception as e:
         logging.ERROR(f"mysql 서버 connection 에러, {e}")
         raise ConnectionError(f"mysql 서버 connection 에러, {e}")
-
-# 환경 변수 값 가져오기 ---------------------------------------------------------------------------------
-def get_env_var(key: str) -> str:
-    value = os.getenv(key)
-    if not value:
-        logging.ERROR(f"환경 변수 {key} 없음")
-        raise ValueError(f"환경 변수 {key} 없음")
-    return value
 
 # mysql 서버에 쿼리 날리기 -----------------------------------------------------------------------------
 def select_query(table_name: str, connection: pymysql.connections.Connection)-> pd.DataFrame:
@@ -77,12 +58,12 @@ def run(connection: pymysql.connections.Connection, save_path: str, tables: dict
 # main -----------------------------------------------------------------------------------------------
 if __name__ == "__main__":
     setup_logging()
-    
+    logging.INFO("--------------ami서버에서 특허 데이터 데이터프레임으로 저장-----------------")
     try:
         connection = create_connection()
         save_path = "./data/kipris_ami"
         tables = {'Main_patent': "kipris_main_patent.csv",
-            'MainClaim_patent': "kipris_claim_patent.csv"} 
+            'MainClaim_patent': "kipris_claim_patent.csv"}  # table명: 저장할 파일 이름
         run(connection, save_path, tables)
     finally:
         connection.close()
